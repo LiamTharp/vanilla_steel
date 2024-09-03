@@ -91,11 +91,6 @@ def generate_metadata_id(d: dict) -> str:
     return unique_id
 
 
-MATERIAL_REGEX = re.compile(
-    r"(?P<grade>[A-Z]+\d+[A-Z]*)\s*\+\s*(?P<coating>[A-Z0-9]+)\s*(?P<finish>[A-Za-z\-]+)\s*(?P<dimensions>\d+[,\d]*\s*x\s*\d+[,\d]*\s*x\s*\d+[,\d]*)"
-)
-
-
 # Define multiple regex patterns to handle different cases
 patterns = [
     re.compile(

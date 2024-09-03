@@ -15,13 +15,9 @@ INPUT_DATA_FILE_NAMES: dict[str, str | os.PathLike] = {
 
 STANDARD_ORDER_INFO = [
     "material_id",
-    "material_name",
     "quantity",
     "unit",
-    "price_per_unit",
     "supplier",
-    "thickness_mm",
-    "width_mm",
     "weight",
 ]
 
@@ -32,9 +28,11 @@ STANDARD_METADATA = [
     "description_i18n",
     "composition",
     "additional_info",
+    "thickness_mm",
+    "width_mm",
 ]
 
-COMPOSITION_KEYS = [
+COMPOSITION_ELEMENTS = [
     "AG",
     "Al",
     "Ars",
@@ -88,7 +86,7 @@ def parse_source1(df: pd.DataFrame) -> tuple[list[dict], list[dict]]:
         }
         metadata_entry["finish_i18n"] = {"de": metadata_entry.pop("finish_i18n")}
 
-        composition = {k: v for k, v in row.items() if k in COMPOSITION_KEYS}
+        composition = {k: v for k, v in row.items() if k in COMPOSITION_ELEMENTS}
         metadata_entry.update(
             {
                 "composition": composition,

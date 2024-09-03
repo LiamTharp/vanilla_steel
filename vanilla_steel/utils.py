@@ -15,7 +15,6 @@ def parse_xlsx_file(
 
     def _parse_sheet(sheet_name):
 
-        sheet_name = xl.sheet_names[0]
         raw_sheet = xl.parse(sheet_name, header=None)
 
         row_counts = np.logical_not(raw_sheet.isnull()).sum(axis=1)
@@ -53,6 +52,8 @@ def parse_xlsx_file(
             df = xl.parse(
                 sheet_name=sheet_name, skiprows=start, nrows=num_rows, header=0
             ).dropna(axis=1, how="all")
+
+            df = df.rename(columns=lambda x: x.strip())
             dfs.append(df)
 
         return dfs
@@ -112,6 +113,9 @@ patterns = [
     re.compile(
         r"(?P<grade>[A-Z]+)\s+(?P<height>\d+[.,]?\d*)x(?P<width>\d+[.,]?\d*)\s+(?P<coating>[A-Z0-9\/\+\-]+(?:\s+\d+[.,]?\d*)?)\s+(?P<finish>[A-Z0-9\/\-\+]+)\s*(?P<additional>[A-Z]+)?"
     ),
+    re.compile(
+        r"(?P<grade>[A-Z]+)\s+(?P<height>\d+[.,]?\d*)x(?P<width>\d+[.,]?\d*)x(?P<length>\d+[.,]?\d*)\s+(?P<coating>[A-Z0-9\/\-\+]+)\s+(?P<finish>[A-Z0-9\/\-\+]+)\s*(?P<additional>[A-Z]+)?"
+    ),
 ]
 
 
@@ -154,19 +158,21 @@ def extract_material_info(material_string: str) -> dict:
     return {}
 
 
-# Test the updated function
-sample_strings = [
-    "DX51D +Z140 Ma-C 1,50 x 1350,00 x 2850,00",
-    "DX51D +AZ150 Ma-C 1,00 x 1250,00 mm AFP",
-    "S235JR geolied 1,75 x 1250,00 mm",
-    "HDC 0.75x1010 GXES G10/10 MB O",
-    "HDC 1x1000 HX300LAD+Z 140 MB O",
-    "CR 1.47x1390 X-ES A O",
-    "HRP 2x1360 HR2 O",
-    "HDC 1x1432 HX380LAD+Z 140 MB O",
-]
+if __name__ == "__main__":
+    # Test the updated function
+    sample_strings = [
+        "DX51D +Z140 Ma-C 1,50 x 1350,00 x 2850,00",
+        "DX51D +AZ150 Ma-C 1,00 x 1250,00 mm AFP",
+        "S235JR geolied 1,75 x 1250,00 mm",
+        "HDC 0.75x1010 GXES G10/10 MB O",
+        "HDC 1x1000 HX300LAD+Z 140 MB O",
+        "CR 1.47x1390 X-ES A O",
+        "HRP 2x1360 HR2 O",
+        "HDC 1x1432 HX380LAD+Z 140 MB O",
+        "DRP 1.8x420x121 YMAGINE H500 O",
+    ]
 
-for string in sample_strings:
-    material_info = extract_material_info(string)
-    print(f"Material: {string}")
-    print(material_info)
+    for string in sample_strings:
+        material_info = extract_material_info(string)
+        print(f"Material: {string}")
+        print(material_info)

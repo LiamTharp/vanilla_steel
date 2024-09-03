@@ -1,4 +1,5 @@
 import hashlib
+import re
 from typing import MutableMapping
 import pandas as pd
 import numpy as np
@@ -78,7 +79,7 @@ def generate_metadata_id(d: dict) -> str:
     sorted_items = sorted(flat_dict.items())
 
     # Remove 'metadata_id' from the list
-    sorted_items = [item for item in sorted_items if item[0] != "metadata_id"]
+    sorted_items = [item for item in sorted_items if item[0] != "material_id"]
 
     # Create a string of concatenated key-value pairs
     concatenated_string = "".join(f"{k}:{v}" for k, v in sorted_items)
@@ -87,3 +88,85 @@ def generate_metadata_id(d: dict) -> str:
     unique_id = hashlib.md5(concatenated_string.encode()).hexdigest()
 
     return unique_id
+
+
+MATERIAL_REGEX = re.compile(
+    r"(?P<grade>[A-Z]+\d+[A-Z]*)\s*\+\s*(?P<coating>[A-Z0-9]+)\s*(?P<finish>[A-Za-z\-]+)\s*(?P<dimensions>\d+[,\d]*\s*x\s*\d+[,\d]*\s*x\s*\d+[,\d]*)"
+)
+
+
+# Define multiple regex patterns to handle different cases
+patterns = [
+    re.compile(
+        r"(?P<grade>[A-Z]+\d+[A-Z]*)\s*\+\s*(?P<coating>[A-Z0-9]+)\s+(?P<finish>[A-Za-z\-]+)\s+(?P<dimensions>\d+[,\d]*\s*x\s*\d+[,\d]*\s*x\s*\d+[,\d]*)(\s*mm)?(\s*(?P<additional>[A-Z]+))?"
+    ),
+    re.compile(
+        r"(?P<grade>[A-Z]+\d+[A-Z]*)\s*\+\s*(?P<coating>[A-Z0-9]+)\s+(?P<finish>[A-Za-z\-]+)\s+(?P<dimensions>\d+[,\d]*\s*x\s*\d+[,\d]*)(\s*mm)?(\s*(?P<additional>[A-Z]+))?"
+    ),
+    re.compile(
+        r"(?P<grade>[A-Z]+\d+[A-Z]*)\s+(?P<finish>[A-Za-z]+)\s+(?P<dimensions>\d+[,\d]*\s*x\s*\d+[,\d]*)(\s*mm)?(\s*(?P<additional>[A-Z]+))?"
+    ),
+    # re.compile(
+    #     r"(?P<grade>[A-Z]+)\s+(?P<height>\d+[.,]?\d*)x(?P<width>\d+[.,]?\d*)\s+(?P<coating>[A-Z0-9\/\-]+)\s+(?P<finish>[A-Z0-9\/\-]+)\s*(?P<additional>[A-Z]+)?"
+    # ),
+    re.compile(
+        r"(?P<grade>[A-Z]+)\s+(?P<height>\d+[.,]?\d*)x(?P<width>\d+[.,]?\d*)\s+(?P<coating>[A-Z0-9\/\+\-]+(?:\s+\d+[.,]?\d*)?)\s+(?P<finish>[A-Z0-9\/\-\+]+)\s*(?P<additional>[A-Z]+)?"
+    ),
+]
+
+
+def decompose_dimensions(dimensions: str) -> dict:
+    """Decomposes a dimension string into width, length, and height as numeric types."""
+    # Split dimensions by 'x' and remove any whitespace
+    dim_parts = [dim.strip() for dim in dimensions.split("x")]
+
+    # Decompose into length, width, height (assuming order) and parse as floats
+    decomposition = {}
+    if len(dim_parts) == 3:
+        decomposition = {
+            "length": float(dim_parts[2].replace(",", ".")),
+            "width": float(dim_parts[1].replace(",", ".")),
+            "height": float(dim_parts[0].replace(",", ".")),
+        }
+    elif len(dim_parts) == 2:
+        decomposition = {
+            "length": None,  # No length provided
+            "width": float(dim_parts[1].replace(",", ".")),
+            "height": float(dim_parts[0].replace(",", ".")),
+        }
+
+    return decomposition
+
+
+def extract_material_info(material_string: str) -> dict:
+    for pattern in patterns:
+        match = pattern.search(material_string)
+        if match:
+            material_info = match.groupdict()
+            dimensions = material_info.get("dimensions", "")
+            dimension_parts = decompose_dimensions(dimensions)
+            material_info.update(dimension_parts)
+            # Remove the combined dimensions key
+            material_info.pop("dimensions", None)
+            return material_info
+
+    # If no pattern matches, return an empty dictionary
+    return {}
+
+
+# Test the updated function
+sample_strings = [
+    "DX51D +Z140 Ma-C 1,50 x 1350,00 x 2850,00",
+    "DX51D +AZ150 Ma-C 1,00 x 1250,00 mm AFP",
+    "S235JR geolied 1,75 x 1250,00 mm",
+    "HDC 0.75x1010 GXES G10/10 MB O",
+    "HDC 1x1000 HX300LAD+Z 140 MB O",
+    "CR 1.47x1390 X-ES A O",
+    "HRP 2x1360 HR2 O",
+    "HDC 1x1432 HX380LAD+Z 140 MB O",
+]
+
+for string in sample_strings:
+    material_info = extract_material_info(string)
+    print(f"Material: {string}")
+    print(material_info)

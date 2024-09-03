@@ -1,3 +1,5 @@
+import hashlib
+from typing import MutableMapping
 import pandas as pd
 import numpy as np
 import os
@@ -55,3 +57,33 @@ def parse_xlsx_file(
         return dfs
 
     return {sheet_name: _parse_sheet(sheet_name) for sheet_name in xl.sheet_names}
+
+
+def flatten_dict(d, parent_key="", sep="_"):
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
+
+def generate_metadata_id(d: dict) -> str:
+    # Flatten the dictionary
+    flat_dict = flatten_dict(d)
+
+    # Sort the dictionary by keys
+    sorted_items = sorted(flat_dict.items())
+
+    # Remove 'metadata_id' from the list
+    sorted_items = [item for item in sorted_items if item[0] != "metadata_id"]
+
+    # Create a string of concatenated key-value pairs
+    concatenated_string = "".join(f"{k}:{v}" for k, v in sorted_items)
+
+    # Generate a hash of the concatenated string
+    unique_id = hashlib.md5(concatenated_string.encode()).hexdigest()
+
+    return unique_id

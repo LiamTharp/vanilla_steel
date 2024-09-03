@@ -35,6 +35,8 @@ def summarize_data(file_path: str | os.PathLike):
 
 # %%
 
-source_data = {name: summarize_data(file_path) for name, file_path in file_paths.items()}
+source_data = {
+    name: summarize_data(file_path) for name, file_path in file_paths.items()
+}
 
 # %%
